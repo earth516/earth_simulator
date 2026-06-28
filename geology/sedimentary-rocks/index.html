@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>퇴적암 분류 시뮬레이터</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css">
+    <style>
+        :root {
+            --bg: #070b16;
+            --panel: #0f1626;
+            --line: rgba(126,148,188,0.16);
+            --text: #e9edf6;
+            --muted: #8b94ab;
+            --accent: #5cd6e8;
+            --geo: #e0913e;
+            --card-bg: rgba(15, 22, 38, 0.8);
+        }
+
+        * { box-sizing: border-box; font-family: 'Pretendard', sans-serif; }
+        body { margin: 0; background-color: var(--bg); color: var(--text); display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        
+        header { padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--line); background-color: var(--panel); z-index: 10; }
+        header a { color: var(--muted); text-decoration: none; font-size: 0.9rem; transition: color 0.2s; }
+        header a:hover { color: var(--text); }
+        .creator-info { font-size: 0.85rem; color: var(--muted); }
+
+        .top-info { padding: 16px 24px; text-align: center; }
+        .category-label { display: inline-block; color: var(--geo); font-weight: 700; font-size: 0.9rem; margin-bottom: 4px; padding: 2px 8px; border: 1px solid var(--geo); border-radius: 12px; }
+        h1 { margin: 0; font-size: 1.5rem; font-weight: 700; }
+
+        main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        
+        .workspace { flex: 1; display: flex; padding: 0 24px; gap: 24px; margin-bottom: 16px; min-height: 0; }
+        
+        .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; position: relative; }
+        .left-panel { flex: 3; }
+        .right-panel { flex: 2; align-items: center; justify-content: flex-start; }
+        
+        .canvas-container { flex: 1; width: 100%; position: relative; display: flex; justify-content: center; align-items: center; min-height: 0; }
+        canvas { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 8px; background: rgba(0,0,0,0.3); }
+        .canvas-label { position: absolute; top: 12px; left: 12px; font-size: 0.85rem; color: var(--muted); background: rgba(0,0,0,0.6); padding: 4px 8px; border-radius: 6px; pointer-events: none; }
+
+        .result-info { width: 100%; margin-top: 16px; padding: 16px; background: var(--bg); border-radius: 8px; border: 1px solid var(--line); text-align: center; }
+        .badge { display: inline-block; font-size: 1.2rem; font-weight: 700; color: var(--bg); background: var(--geo); padding: 6px 16px; border-radius: 20px; margin-bottom: 8px; }
+        .desc { font-size: 0.95rem; line-height: 1.5; color: var(--text); }
+        
+        .controls-area { padding: 16px 24px; background: var(--panel); border-top: 1px solid var(--line); z-index: 10; display: flex; flex-direction: column; gap: 16px; }
+        
+        .step-header { display: flex; justify-content: space-between; align-items: center; }
+        .step-title { font-size: 1.1rem; font-weight: 700; color: var(--accent); }
+        .step-desc { font-size: 0.9rem; color: var(--muted); margin-top: 4px; }
+        .step-nav { display: flex; gap: 8px; }
+        .btn { background: transparent; border: 1px solid var(--line); color: var(--text); padding: 6px 16px; border-radius: 6px; cursor: pointer; transition: all 0.2s; font-size: 0.9rem; }
+        .btn:hover:not(:disabled) { background: var(--line); }
+        .btn:disabled { opacity: 0.3; cursor: not-allowed; }
+        .btn.primary { background: var(--geo); border-color: var(--geo); color: var(--bg); font-weight: 700; }
+        .btn.primary:hover:not(:disabled) { filter: brightness(1.1); background: var(--geo); }
+
+        .sliders { display: flex; gap: 24px; flex-wrap: wrap; }
+        .slider-group { flex: 1; min-width: 200px; display: flex; flex-direction: column; gap: 8px; }
+        .slider-header { display: flex; justify-content: space-between; font-size: 0.9rem; }
+        .slider-val { color: var(--geo); font-weight: bold; }
+        input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; cursor: pointer; }
+        input[type=range]:focus { outline: 2px solid var(--accent); outline-offset: 2px; }
+        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 6px; background: var(--line); border-radius: 3px; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 16px; width: 16px; border-radius: 50%; background: var(--geo); margin-top: -5px; box-shadow: 0 0 4px rgba(0,0,0,0.5); }
+        
+        .exaggeration-note { position: absolute; bottom: 12px; right: 12px; font-size: 0.75rem; color: rgba(255,255,255,0.4); pointer-events: none; }
+
+        @media (max-width: 768px) {
+            .workspace { flex-direction: column; }
+            .left-panel { flex: 1; min-height: 250px; }
+            .right-panel { flex: 1; min-height: 250px; }
+            header { flex-direction: column; gap: 8px; align-items: flex-start; }
+            .sliders { flex-direction: column; gap: 12px; }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <a href="../../index.html">◀ 지구과학 시뮬레이터 홈</a>
+    <div class="creator-info">만든이 SJ · 문의 cepheid@kakao.com</div>
+</header>
+
+<div class="top-info">
+    <div class="category-label">지질학</div>
+    <h1>퇴적암 분류 시뮬레이터</h1>
+</div>
+
+<main>
+    <div class="workspace">
+        <div class="panel left-panel">
+            <div class="canvas-container">
+                <canvas id="envCanvas"></canvas>
+                <div class="canvas-label">퇴적 환경 (원리)</div>
+                <div class="exaggeration-note">* 입자 크기 및 속도 (과장)</div>
+            </div>
+        </div>
+        <div class="panel right-panel">
+            <div class="canvas-container" style="flex: 0.8;">
+                <canvas id="rockCanvas" width="200" height="200"></canvas>
+                <div class="canvas-label">생성된 퇴적암</div>
+            </div>
+            <div class="result-info">
+                <div class="badge" id="resultBadge">암석 이름</div>
+                <div class="desc" id="resultDesc">설명이 표시됩니다.</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="controls-area">
+        <div class="step-header">
+            <div>
+                <div class="step-title" id="stepTitle">1단계: 쇄설성 퇴적암</div>
+                <div class="step-desc" id="stepDesc">암석이 부서져 만들어진 입자나 화산재가 쌓이는 환경입니다. 입자의 크기를 조절해보세요.</div>
+            </div>
+            <div class="step-nav">
+                <button class="btn" id="prevBtn" onclick="changeStep(-1)">이전</button>
+                <button class="btn primary" id="nextBtn" onclick="changeStep(1)">다음</button>
+            </div>
+        </div>
+        
+        <div class="sliders">
+            <div class="slider-group" id="originGroup">
+                <div class="slider-header">
+                    <span>퇴적물 기원</span>
+                    <span class="slider-val" id="originVal">쇄설성</span>
+                </div>
+                <input type="range" id="originSlider" min="1" max="3" value="1" step="1">
+            </div>
+            
+            <div class="slider-group" id="materialGroup">
+                <div class="slider-header">
+                    <span id="materialLabel">퇴적물 종류 (크기)</span>
+                    <span class="slider-val" id="materialVal">점토</span>
+                </div>
+                <input type="range" id="materialSlider" min="1" max="4" value="1" step="1">
+            </div>
+        </div>
+    </div>
+</main>
+
+<script>
+    // --- State Management ---
+    let currentStep = 1;
+    let state = {
+        origin: 1, // 1:쇄설성, 2:화학적, 3:유기적
+        material: 1 // 기원에 따른 세부 속성
+    };
+
+    // DOM Elements
+    const stepTitle = document.getElementById('stepTitle');
+    const stepDesc = document.getElementById('stepDesc');
+    const originSlider = document.getElementById('originSlider');
+    const originVal = document.getElementById('originVal');
+    const materialSlider = document.getElementById('materialSlider');
+    const materialLabel = document.getElementById('materialLabel');
+    const materialVal = document.getElementById('materialVal');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const originGroup = document.getElementById('originGroup');
+    
+    const resultBadge = document.getElementById('resultBadge');
+    const resultDesc = document.getElementById('resultDesc');
+
+    // Canvas Contexts
+    const envCanvas = document.getElementById('envCanvas');
+    const envCtx = envCanvas.getContext('2d');
+    const rockCanvas = document.getElementById('rockCanvas');
+    const rockCtx = rockCanvas.getContext('2d');
+
+    let particles = [];
+    let animationId;
+
+    const ORIGIN_NAMES = { 1: "쇄설성", 2: "화학적", 3: "유기적" };
+    
+    const MATERIAL_DATA = {
+        1: [ // 쇄설성
+            { name: "점토", max: 4 },
+            { name: "모래, 점토", max: 4 },
+            { name: "자갈, 모래, 점토", max: 4 },
+            { name: "화산재", max: 4 }
+        ],
+        2: [ // 화학적
+            { name: "탄산칼슘", max: 3 },
+            { name: "규질 물질", max: 3 },
+            { name: "염화나트륨", max: 3 }
+        ],
+        3: [ // 유기적
+            { name: "식물체", max: 3 },
+            { name: "석회질 생물체", max: 3 },
+            { name: "규질 생물체", max: 3 }
+        ]
+    };
+
+    function resizeCanvas() {
+        const container = envCanvas.parentElement;
+        envCanvas.width = container.clientWidth;
+        envCanvas.height = container.clientHeight;
+        particles = []; // Resize시 초기화
+    }
+    window.addEventListener('resize', resizeCanvas);
+
+    // --- Logic ---
+    function updateStateFromStep() {
+        originGroup.style.display = currentStep === 4 ? "flex" : "none";
+        
+        if (currentStep === 1) {
+            state.origin = 1; state.material = 1;
+            stepTitle.textContent = "1단계: 쇄설성 퇴적암 탐구";
+            stepDesc.textContent = "풍화, 침식, 화산활동으로 생성된 입자들이 운반되어 쌓이는 환경입니다. 입자의 종류를 조절해보세요.";
+        } else if (currentStep === 2) {
+            state.origin = 2; state.material = 1;
+            stepTitle.textContent = "2단계: 화학적 퇴적암 탐구";
+            stepDesc.textContent = "물속에 녹아 있던 물질이 화학적으로 침전되거나 물이 증발하며 쌓이는 환경입니다.";
+        } else if (currentStep === 3) {
+            state.origin = 3; state.material = 1;
+            stepTitle.textContent = "3단계: 유기적 퇴적암 탐구";
+            stepDesc.textContent = "동식물이나 미생물의 유해가 썩지 않고 바닥에 쌓여 만들어지는 환경입니다.";
+        } else if (currentStep === 4) {
+            stepTitle.textContent = "4단계: 자유 탐구";
+            stepDesc.textContent = "퇴적물의 기원과 종류를 자유롭게 조합하여 모든 퇴적암을 분류해보세요.";
+        }
+        
+        originSlider.value = state.origin;
+        updateMaterialSliderLimits();
+        materialSlider.value = state.material;
+        
+        updateUI();
+    }
+
+    function updateMaterialSliderLimits() {
+        const data = MATERIAL_DATA[state.origin];
+        materialSlider.max = data[0].max;
+        if(state.material > data[0].max) state.material = data[0].max;
+    }
+
+    function changeStep(dir) {
+        currentStep += dir;
+        if(currentStep < 1) currentStep = 1;
+        if(currentStep > 4) currentStep = 4;
+        
+        prevBtn.disabled = currentStep === 1;
+        nextBtn.disabled = currentStep === 4;
+        
+        updateStateFromStep();
+    }
+
+    originSlider.addEventListener('input', (e) => {
+        if(currentStep === 4) {
+            state.origin = parseInt(e.target.value);
+            state.material = 1; // Reset material when origin changes
+            updateMaterialSliderLimits();
+            materialSlider.value = 1;
+            updateUI();
+        }
+    });
+
+    materialSlider.addEventListener('input', (e) => {
+        state.material = parseInt(e.target.value);
+        updateUI();
+    });
+
+    function getResult() {
+        const o = state.origin;
+        const m = state.material;
+        
+        if (o === 1) { // 쇄설성
+            if(m === 1) return { rock: "셰일", desc: "매우 고운 점토가 층층이 쌓여 다져진 암석입니다. 흔히 얇은 층리가 관찰됩니다." };
+            if(m === 2) return { rock: "사암", desc: "주로 모래 크기의 입자들이 쌓여 만들어진 암석입니다. 까끌까끌한 촉감을 가집니다." };
+            if(m === 3) return { rock: "역암", desc: "자갈과 함께 모래, 점토가 섞여 쌓인 암석입니다. 큰 덩어리들이 박혀있는 모습을 띱니다." };
+            if(m === 4) return { rock: "응회암", desc: "화산 활동으로 분출된 화산재가 쌓이고 굳어져 만들어진 암석입니다." };
+        } else if (o === 2) { // 화학적
+            if(m === 1) return { rock: "석회암", desc: "물속에 녹아있던 탄산칼슘 성분이 화학적으로 침전되어 만들어진 암석입니다." };
+            if(m === 2) return { rock: "처트", desc: "규질 물질이 화학적으로 침전되어 만들어진 암석으로, 매우 단단하고 매끄럽습니다." };
+            if(m === 3) return { rock: "암염", desc: "건조한 기후에서 호수나 바닷물이 증발하여 염화나트륨이 침전되어 만들어진 암석입니다." };
+        } else if (o === 3) { // 유기적
+            if(m === 1) return { rock: "석탄", desc: "식물체가 습지 등에 두껍게 쌓인 후 탄화 작용을 받아 만들어진 검은 암석입니다." };
+            if(m === 2) return { rock: "석회암", desc: "조개껍데기, 산호 등 탄산칼슘 성분을 가진 생물체의 유해가 쌓여 만들어진 암석입니다." };
+            if(m === 3) return { rock: "처트", desc: "규조류 등 규질 성분의 껍질을 가진 미생물의 유해가 뭉쳐져 만들어진 암석입니다." };
+        }
+        return { rock: "알 수 없음", desc: "" };
+    }
+
+    function updateUI() {
+        originVal.textContent = ORIGIN_NAMES[state.origin];
+        materialLabel.textContent = state.origin === 1 ? "퇴적물 크기/종류" : (state.origin === 2 ? "침전 물질" : "생물체 유해");
+        materialVal.textContent = MATERIAL_DATA[state.origin][state.material - 1].name;
+
+        const result = getResult();
+        resultBadge.textContent = `${ORIGIN_NAMES[state.origin]} - ${result.rock}`;
+        resultDesc.textContent = result.desc;
+        
+        particles = []; // 환경 캔버스 초기화 (새로운 입자 떨어지도록)
+        drawRock(); // 암석 캔버스 갱신
+    }
+
+    // --- Canvas Animations (Environment) ---
+    class Particle {
+        constructor() {
+            this.reset(true);
+        }
+        reset(randomY = false) {
+            this.x = Math.random() * envCanvas.width;
+            this.y = randomY ? Math.random() * envCanvas.height : -20 - Math.random() * 50;
+            this.vx = (Math.random() - 0.5) * 0.5;
+            this.vy = 0.5 + Math.random() * 2;
+            this.size = 2;
+            this.color = '#fff';
+            this.type = 'circle';
+            this.settleY = envCanvas.height - 10 - Math.random() * 60;
+            this.settled = randomY && this.y > this.settleY;
+            this.rotation = Math.random() * Math.PI * 2;
+            this.rotSpeed = (Math.random() - 0.5) * 0.1;
+            this.configure();
+        }
+        configure() {
+            const o = state.origin;
+            const m = state.material;
+            
+            if(o === 1) { // 쇄설성
+                this.type = 'circle';
+                if(m === 1) { this.size = 1.5; this.color = '#8d7865'; this.vy = 0.3 + Math.random()*0.5; } // 점토
+                else if(m === 2) { this.size = Math.random()>0.5?3:1.5; this.color = '#c2a884'; this.vy = 0.8 + Math.random(); } // 모래+점토
+                else if(m === 3) { this.size = Math.random()>0.8?8:(Math.random()>0.5?3:1.5); this.color = '#a09489'; this.vy = 1.5 + Math.random()*1.5; } // 자갈+
+                else if(m === 4) { this.type = 'poly'; this.size = 2 + Math.random()*2; this.color = '#9aa1a9'; this.vy = 1 + Math.random(); this.vx = 2 + Math.random(); this.x = -50; this.y = Math.random()*envCanvas.height/2; } // 화산재(옆에서)
+            } else if(o === 2) { // 화학적
+                if(m === 1) { this.type = 'circle'; this.size = 2; this.color = 'rgba(230,230,235,0.7)'; this.vy = 0.5; } // 탄산칼슘
+                else if(m === 2) { this.type = 'poly'; this.size = 3; this.color = 'rgba(180,100,80,0.6)'; this.vy = 0.4; } // 규질
+                else if(m === 3) { this.type = 'square'; this.size = 4; this.color = 'rgba(255,255,255,0.8)'; this.vy = 1; this.y = envCanvas.height * Math.random(); this.settleY = envCanvas.height - Math.random()*30;} // 암염 (증발 느낌)
+            } else if(o === 3) { // 유기적
+                if(m === 1) { this.type = 'leaf'; this.size = 5; this.color = '#4a5d23'; this.vy = 0.7; } // 식물
+                else if(m === 2) { this.type = 'shell'; this.size = 4; this.color = '#e4d5b7'; this.vy = 1.2; } // 껍데기
+                else if(m === 3) { this.type = 'circle'; this.size = 1.5; this.color = 'rgba(200,220,230,0.6)'; this.vy = 0.3; } // 미생물
+            }
+        }
+        update() {
+            if(!this.settled) {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.rotation += this.rotSpeed;
+                
+                if (state.origin === 2 && state.material === 3) {
+                     // 암염 증발 연출 (물이 줄어드는 느낌)
+                     if(this.y > this.settleY) this.settled = true;
+                } else if (state.origin === 1 && state.material === 4) {
+                     // 화산재 (오른쪽으로 날아감)
+                     if(this.x > envCanvas.width || this.y > this.settleY) this.settled = true;
+                } else {
+                    if(this.y > this.settleY) this.settled = true;
+                }
+            } else {
+                // 쌓인 후 서서히 사라지고 리셋하여 순환
+                if(Math.random() < 0.005) {
+                    this.reset(false);
+                }
+            }
+        }
+        draw(ctx) {
+            ctx.save();
+            ctx.translate(this.x, this.y);
+            ctx.rotate(this.rotation);
+            ctx.fillStyle = this.color;
+            ctx.beginPath();
+            if(this.type === 'circle') {
+                ctx.arc(0, Normally I can help with things like this, but I don't seem to have access to that content. You can try again or ask me for something else.
