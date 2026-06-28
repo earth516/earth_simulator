@@ -178,11 +178,10 @@
 (() => {
   "use strict";
   
-  // 선생님의 구글 시트 ID 연결
   const SHEET_ID = "1kY-e-ICRR8y8qnCm78soggX45t_xPp2HXwc79x4wqWk";
-  const SPREADSHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/pub?output=csv`;
+  // 💡 데이터 뒤에 시간을 붙여서 브라우저가 옛날 데이터를 기억하는 것을 강제로 방지합니다.
+  const SPREADSHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/pub?output=csv&t=${new Date().getTime()}`;
 
-  // 카테고리별 썸네일 아이콘
   const ICONS = {
     ast: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>',
     geo: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 18l5-9 4 5 3-4 6 8z"/></svg>',
@@ -190,29 +189,39 @@
     oce: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 12c4-4 8 4 12 0s5-2 6-1"/></svg>'
   };
 
-  // CSV 파싱 함수
-  function parseCSV(text) {
-    const lines = text.split("\n").map(line => line.trim()).filter(line => line);
-    if (lines.length === 0) return [];
-    const headers = lines[0].split(",").map(h => h.trim().replace(/^"|"$/g, ''));
-    
-    return lines.slice(1).map(line => {
-      const matches = line.match(/(".*?"|[^,]+)/g) || [];
-      const values = matches.map(v => v.trim().replace(/^"|"$/g, '').replace(/""/g, '"'));
+  // 더욱 강력해진 CSV 파서 (설명에 쉼표 등이 들어가도 에러가 나지 않음)
+  function parseCSV(str) {
+    const arr = [];
+    let quote = false;
+    for (let row = 0, col = 0, c = 0; c < str.length; c++) {
+      let cc = str[c], nc = str[c+1];
+      arr[row] = arr[row] || [];
+      arr[row][col] = arr[row][col] || '';
+      if (cc == '"' && quote && nc == '"') { arr[row][col] += cc; ++c; continue; }
+      if (cc == '"') { quote = !quote; continue; }
+      if (cc == ',' && !quote) { ++col; continue; }
+      if (cc == '\r' && nc == '\n' && !quote) { ++row; col = 0; ++c; continue; }
+      if (cc == '\n' && !quote) { ++row; col = 0; continue; }
+      if (cc == '\r' && !quote) { ++row; col = 0; continue; }
+      arr[row][col] += cc;
+    }
+    if (arr.length < 2) return [];
+    const headers = arr[0].map(h => h.trim());
+    return arr.slice(1).map(row => {
       const obj = {};
-      headers.forEach((header, i) => { obj[header] = values[i] || ""; });
+      headers.forEach((h, i) => { obj[h] = row[i] ? row[i].trim() : ""; });
       return obj;
     });
   }
 
-  // 카드 렌더링
   function renderDashboard(data) {
     const counts = { geo: 0, atm: 0, oce: 0, ast: 0 };
     
-    // 로딩 완료 후 전체 카테고리 표시
     ["geo", "atm", "oce", "ast"].forEach(cat => {
-      document.getElementById(`grid-${cat}`).innerHTML = "";
-      document.getElementById(`sec-${cat}`).classList.add("active");
+      const grid = document.getElementById(`grid-${cat}`);
+      if(grid) grid.innerHTML = "";
+      const sec = document.getElementById(`sec-${cat}`);
+      if(sec) sec.classList.add("active");
     });
 
     data.forEach(item => {
@@ -245,21 +254,22 @@
     });
 
     Object.keys(counts).forEach(cat => {
-      document.getElementById(`count-${cat}`).textContent = counts[cat] > 0 ? `${counts[cat]}개 이용 가능` : "준비 중";
+      const countEl = document.getElementById(`count-${cat}`);
+      if(countEl) countEl.textContent = counts[cat] > 0 ? `${counts[cat]}개 이용 가능` : "준비 중";
     });
     document.getElementById("loadingView").style.display = "none";
   }
 
-  // 데이터 동기화
   fetch(SPREADSHEET_URL)
     .then(res => res.text())
     .then(text => {
       const data = parseCSV(text);
+      if(data.length === 0) throw new Error("데이터가 비어있습니다.");
       renderDashboard(data);
     })
     .catch(err => {
       console.error(err);
-      document.getElementById("loadingView").textContent = "데이터를 불러오는 중 오류가 발생했습니다.";
+      document.getElementById("loadingView").textContent = "데이터를 불러오는 중 오류가 발생했습니다. 구글 시트의 [웹에 게시] 설정을 확인해주세요.";
     });
 })();
 </script>
