@@ -44,8 +44,9 @@
     border:1px solid var(--line);background:var(--panel);padding:9px 14px;border-radius:999px}
   .dchip .sw{width:10px;height:10px;border-radius:50%}
 
-  /* category */
-  .cat{margin-bottom:38px}
+  /* category (데이터가 불려오기 전까지 숨김 처리) */
+  .cat{margin-bottom:38px; display:none;}
+  .cat.active{display:block;}
   .cathead{display:flex;align-items:center;gap:14px;margin-bottom:16px}
   .catemblem{width:46px;height:46px;border-radius:13px;display:grid;place-items:center;flex:none;border:1px solid var(--line)}
   .cattext{display:flex;flex-direction:column;gap:2px}
@@ -58,6 +59,7 @@
   @media(max-width:820px){.grid{grid-template-columns:repeat(2,1fr)}}
   @media(max-width:540px){.grid{grid-template-columns:1fr}}
 
+  /* simcards */
   .simcard{position:relative;display:flex;flex-direction:column;gap:12px;text-decoration:none;color:inherit;
     background:linear-gradient(180deg,var(--panel),var(--bg-2));border:1px solid var(--line);
     border-radius:16px;padding:18px;min-height:158px;transition:.18s;overflow:hidden}
@@ -79,6 +81,9 @@
   @media(prefers-reduced-motion:reduce){.badge-live .pulse{animation:none}a.simcard:hover{transform:none}}
 
   footer{margin-top:30px;padding-top:22px;border-top:1px solid var(--line);font-size:12.5px;color:var(--muted-2);display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
+  
+  /* 로딩 상태창 */
+  .loading{text-align:center;padding:40px;color:var(--muted);font-weight:600;}
 </style>
 </head>
 <body>
@@ -101,8 +106,10 @@
     </div>
   </header>
 
-<!-- 천문 (시뮬레이터 보유) -->
-  <section class="cat" style="--cc:var(--ast)">
+  <div id="loadingView" class="loading">시뮬레이션 목록을 동기화하는 중...</div>
+
+  <!-- 천문 -->
+  <section id="sec-ast" class="cat" style="--cc:var(--ast)">
     <div class="cathead">
       <div class="catemblem" style="background:color-mix(in srgb,var(--ast) 16%,transparent);color:var(--ast)">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="3.4"/><ellipse cx="12" cy="12" rx="10" ry="4.3" transform="rotate(-22 12 12)"/></svg>
@@ -111,35 +118,13 @@
         <div class="catname">천문 <span class="en">Astronomy</span></div>
         <div class="catdesc">태양계 천체의 운동과 식 현상</div>
       </div>
-      <div class="catcount">1개 이용 가능</div>
+      <div class="catcount" id="count-ast">0개 이용 가능</div>
     </div>
-    <div class="grid">
-      <!-- 💡 일식과 월식을 하나로 합친 단일 카드입니다 -->
-      <a class="simcard" href="./astronomy/eclipse/index.html?type=solar" style="--cc:var(--ast)">
-        <span class="badge-live"><span class="pulse"></span>이용 가능</span>
-        <div class="thumb" style="display: flex; gap: 2px; background: transparent; border: none;">
-          <!-- 일식 모티브 아이콘 -->
-          <svg width="22" height="22" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="#ffc24a"/><circle cx="16" cy="10" r="8" fill="#0f1626"/></svg>
-          <!-- 월식 모티브 아이콘 -->
-          <svg width="22" height="22" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="#c83a22"/><circle cx="12" cy="12" r="9" fill="none" stroke="#e85a38" stroke-width="1"/></svg>
-        </div>
-        <div class="nm">일식 / 월식 탐구</div>
-        <div class="ds">태양-지구-달의 3차원 공간 배치와 정렬 단면을 보며 일식과 월식의 원리를 통합 탐구합니다.</div>
-        <span class="go">탐구 시작 →</span>
-      </a>
-
-      <!-- 준비 중인 카드 -->
-      <div class="simcard soon">
-        <span class="badge-soon">준비 중</span>
-        <div class="thumb"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8b94ab" stroke-width="1.6"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></div>
-        <div class="nm">별의 진화</div>
-        <div class="ds">H-R도와 별의 일생을 다룰 예정입니다.</div>
-      </div>
-    </div>
+    <div class="grid" id="grid-ast"></div>
   </section>
 
   <!-- 지질 -->
-  <section class="cat" style="--cc:var(--geo)">
+  <section id="sec-geo" class="cat" style="--cc:var(--geo)">
     <div class="cathead">
       <div class="catemblem" style="background:color-mix(in srgb,var(--geo) 16%,transparent);color:var(--geo)">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 7h18M3 12h18M3 17h18" stroke-dasharray="0.1 4" stroke-linecap="round"/><path d="M3 7c4-3 7 3 10 0s7-3 8 0"/></svg>
@@ -148,17 +133,13 @@
         <div class="catname">지질 <span class="en">Geology</span></div>
         <div class="catdesc">지구 내부와 암석·지각 변동</div>
       </div>
-      <div class="catcount">준비 중</div>
+      <div class="catcount" id="count-geo">0개 이용 가능</div>
     </div>
-    <div class="grid">
-      <div class="simcard soon"><span class="badge-soon">준비 중</span><div class="thumb"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8b94ab" stroke-width="1.6"><path d="M3 18l5-9 4 5 3-4 6 8z"/></svg></div><div class="nm">지진파 전파</div><div class="ds">P파·S파와 지구 내부 구조.</div></div>
-      <div class="simcard soon"><span class="badge-soon">준비 중</span><div class="thumb"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8b94ab" stroke-width="1.6"><path d="M4 12h6l2-4 2 8 2-4h4"/></svg></div><div class="nm">판 구조 운동</div><div class="ds">판의 경계와 화산·지진 분포.</div></div>
-      <div class="simcard soon"><span class="badge-soon">준비 중</span><div class="thumb"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8b94ab" stroke-width="1.6"><path d="M12 3a9 9 0 109 9" /><path d="M12 7v5l3 2"/></svg></div><div class="nm">암석 순환</div><div class="ds">화성·퇴적·변성암의 순환.</div></div>
-    </div>
+    <div class="grid" id="grid-geo"></div>
   </section>
 
   <!-- 대기 -->
-  <section class="cat" style="--cc:var(--atm)">
+  <section id="sec-atm" class="cat" style="--cc:var(--atm)">
     <div class="cathead">
       <div class="catemblem" style="background:color-mix(in srgb,var(--atm) 16%,transparent);color:var(--atm)">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M6 16a4 4 0 010-8 5 5 0 019.6-1.5A3.5 3.5 0 0117 16z"/></svg>
@@ -167,17 +148,13 @@
         <div class="catname">대기 <span class="en">Atmosphere</span></div>
         <div class="catdesc">날씨와 대기의 운동</div>
       </div>
-      <div class="catcount">준비 중</div>
+      <div class="catcount" id="count-atm">0개 이용 가능</div>
     </div>
-    <div class="grid">
-      <div class="simcard soon"><span class="badge-soon">준비 중</span><div class="thumb"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8b94ab" stroke-width="1.6"><path d="M4 8h12a3 3 0 100-6M4 13h16a3 3 0 110 6M4 18h8"/></svg></div><div class="nm">기단과 전선</div><div class="ds">한랭·온난전선과 날씨 변화.</div></div>
-      <div class="simcard soon"><span class="badge-soon">준비 중</span><div class="thumb"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8b94ab" stroke-width="1.6"><path d="M12 3v18M5 9l7-6 7 6"/></svg></div><div class="nm">단열 변화</div><div class="ds">공기의 상승·하강과 구름 생성.</div></div>
-      <div class="simcard soon"><span class="badge-soon">준비 중</span><div class="thumb"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8b94ab" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 3v9l5 3"/></svg></div><div class="nm">기압과 바람</div><div class="ds">고기압·저기압과 바람의 방향.</div></div>
-    </div>
+    <div class="grid" id="grid-atm"></div>
   </section>
 
   <!-- 해양 -->
-  <section class="cat" style="--cc:var(--oce)">
+  <section id="sec-oce" class="cat" style="--cc:var(--oce)">
     <div class="cathead">
       <div class="catemblem" style="background:color-mix(in srgb,var(--oce) 16%,transparent);color:var(--oce)">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 8c3-3 6 3 9 0s6-3 9 0M3 14c3-3 6 3 9 0s6-3 9 0"/></svg>
@@ -186,13 +163,9 @@
         <div class="catname">해양 <span class="en">Ocean</span></div>
         <div class="catdesc">바닷물의 성질과 운동</div>
       </div>
-      <div class="catcount">준비 중</div>
+      <div class="catcount" id="count-oce">0개 이용 가능</div>
     </div>
-    <div class="grid">
-      <div class="simcard soon"><span class="badge-soon">준비 중</span><div class="thumb"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8b94ab" stroke-width="1.6"><path d="M3 12c4-4 8 4 12 0s5-2 6-1"/><path d="M5 17h14"/></svg></div><div class="nm">해류 순환</div><div class="ds">표층 해류와 대순환.</div></div>
-      <div class="simcard soon"><span class="badge-soon">준비 중</span><div class="thumb"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8b94ab" stroke-width="1.6"><circle cx="6" cy="12" r="2.5"/><path d="M9 12h12M12 7l-2 5 2 5"/></svg></div><div class="nm">조석</div><div class="ds">달·태양과 밀물·썰물.</div></div>
-      <div class="simcard soon"><span class="badge-soon">준비 중</span><div class="thumb"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8b94ab" stroke-width="1.6"><path d="M4 5v14M4 9h8M4 14h6"/><path d="M14 5v14M20 5v14"/></svg></div><div class="nm">수온·염분</div><div class="ds">깊이에 따른 해수의 층상 구조.</div></div>
-    </div>
+    <div class="grid" id="grid-oce"></div>
   </section>
 
   <footer>
@@ -200,5 +173,95 @@
     <span>문의 cepheid@kakao.com</span>
   </footer>
 </div>
+
+<script>
+(() => {
+  "use strict";
+  
+  // 선생님의 구글 시트 ID 연결
+  const SHEET_ID = "1kY-e-ICRR8y8qnCm78soggX45t_xPp2HXwc79x4wqWk";
+  const SPREADSHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/pub?output=csv`;
+
+  // 카테고리별 썸네일 아이콘
+  const ICONS = {
+    ast: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>',
+    geo: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 18l5-9 4 5 3-4 6 8z"/></svg>',
+    atm: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 8h12a3 3 0 100-6M4 13h16a3 3 0 110 6M4 18h8"/></svg>',
+    oce: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 12c4-4 8 4 12 0s5-2 6-1"/></svg>'
+  };
+
+  // CSV 파싱 함수
+  function parseCSV(text) {
+    const lines = text.split("\n").map(line => line.trim()).filter(line => line);
+    if (lines.length === 0) return [];
+    const headers = lines[0].split(",").map(h => h.trim().replace(/^"|"$/g, ''));
+    
+    return lines.slice(1).map(line => {
+      const matches = line.match(/(".*?"|[^,]+)/g) || [];
+      const values = matches.map(v => v.trim().replace(/^"|"$/g, '').replace(/""/g, '"'));
+      const obj = {};
+      headers.forEach((header, i) => { obj[header] = values[i] || ""; });
+      return obj;
+    });
+  }
+
+  // 카드 렌더링
+  function renderDashboard(data) {
+    const counts = { geo: 0, atm: 0, oce: 0, ast: 0 };
+    
+    // 로딩 완료 후 전체 카테고리 표시
+    ["geo", "atm", "oce", "ast"].forEach(cat => {
+      document.getElementById(`grid-${cat}`).innerHTML = "";
+      document.getElementById(`sec-${cat}`).classList.add("active");
+    });
+
+    data.forEach(item => {
+      const cat = item.category;
+      const grid = document.getElementById(`grid-${cat}`);
+      if (!grid) return;
+
+      const isLive = item.status === "live";
+      if (isLive) counts[cat]++;
+
+      const card = isLive 
+        ? `
+          <a class="simcard" href="${item.link}" style="--cc:var(--${cat})">
+            <span class="badge-live"><span class="pulse"></span>이용 가능</span>
+            <div class="thumb" style="color:var(--${cat})">${ICONS[cat]}</div>
+            <div class="nm">${item.title}</div>
+            <div class="ds">${item.description}</div>
+            <span class="go">탐구 시작 →</span>
+          </a>
+        `
+        : `
+          <div class="simcard soon">
+            <span class="badge-soon">준비 중</span>
+            <div class="thumb">${ICONS[cat]}</div>
+            <div class="nm">${item.title}</div>
+            <div class="ds">${item.description}</div>
+          </div>
+        `;
+      grid.insertAdjacentHTML("beforeend", card);
+    });
+
+    Object.keys(counts).forEach(cat => {
+      document.getElementById(`count-${cat}`).textContent = counts[cat] > 0 ? `${counts[cat]}개 이용 가능` : "준비 중";
+    });
+    document.getElementById("loadingView").style.display = "none";
+  }
+
+  // 데이터 동기화
+  fetch(SPREADSHEET_URL)
+    .then(res => res.text())
+    .then(text => {
+      const data = parseCSV(text);
+      renderDashboard(data);
+    })
+    .catch(err => {
+      console.error(err);
+      document.getElementById("loadingView").textContent = "데이터를 불러오는 중 오류가 발생했습니다.";
+    });
+})();
+</script>
 </body>
 </html>
