@@ -101,7 +101,7 @@
     </div>
   </header>
 
-  <!-- 천문 (시뮬레이터 보유) -->
+<!-- 천문 (시뮬레이터 보유) -->
   <section class="cat" style="--cc:var(--ast)">
     <div class="cathead">
       <div class="catemblem" style="background:color-mix(in srgb,var(--ast) 16%,transparent);color:var(--ast)">
@@ -111,27 +111,24 @@
         <div class="catname">천문 <span class="en">Astronomy</span></div>
         <div class="catdesc">태양계 천체의 운동과 식 현상</div>
       </div>
-      <div class="catcount">2개 이용 가능</div>
+      <div class="catcount">1개 이용 가능</div>
     </div>
     <div class="grid">
-      <a class="simcard" href="eclipse-simulator.html?type=solar" style="--cc:var(--ast)">
+      <!-- 💡 일식과 월식을 하나로 합친 단일 카드입니다 -->
+      <a class="simcard" href="./astronomy/eclipse/index.html?type=solar" style="--cc:var(--ast)">
         <span class="badge-live"><span class="pulse"></span>이용 가능</span>
-        <div class="thumb">
-          <svg width="26" height="26" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="#ffc24a"/><circle cx="15.5" cy="10.5" r="8" fill="#0f1626"/></svg>
+        <div class="thumb" style="display: flex; gap: 2px; background: transparent; border: none;">
+          <!-- 일식 모티브 아이콘 -->
+          <svg width="22" height="22" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="#ffc24a"/><circle cx="16" cy="10" r="8" fill="#0f1626"/></svg>
+          <!-- 월식 모티브 아이콘 -->
+          <svg width="22" height="22" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="#c83a22"/><circle cx="12" cy="12" r="9" fill="none" stroke="#e85a38" stroke-width="1"/></svg>
         </div>
-        <div class="nm">일식 탐구</div>
-        <div class="ds">달이 태양을 가리는 원리. 개기·부분·금환·혼성일식을 단계별로 관찰합니다.</div>
+        <div class="nm">일식 / 월식 탐구</div>
+        <div class="ds">태양-지구-달의 3차원 공간 배치와 정렬 단면을 보며 일식과 월식의 원리를 통합 탐구합니다.</div>
         <span class="go">탐구 시작 →</span>
       </a>
-      <a class="simcard" href="eclipse-simulator.html?type=lunar" style="--cc:var(--ast)">
-        <span class="badge-live"><span class="pulse"></span>이용 가능</span>
-        <div class="thumb">
-          <svg width="26" height="26" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="#c83a22"/><circle cx="12" cy="12" r="9" fill="none" stroke="#e85a38" stroke-width="1"/></svg>
-        </div>
-        <div class="nm">월식 탐구</div>
-        <div class="ds">달이 지구 그림자로 들어가는 원리. 개기·부분월식·반영식을 단계별로 관찰합니다.</div>
-        <span class="go">탐구 시작 →</span>
-      </a>
+
+      <!-- 준비 중인 카드 -->
       <div class="simcard soon">
         <span class="badge-soon">준비 중</span>
         <div class="thumb"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8b94ab" stroke-width="1.6"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></div>
