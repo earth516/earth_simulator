@@ -172,7 +172,7 @@
 
   <div class="stage">
     <div class="card">
-      <div class="hd"><h2 id="topTitle">공간 배치도</h2><span class="sub">북극 위에서 본 모습 · 모식도</span></div>
+      <div class="hd"><h2 id="topTitle">공간 배치도</h2><span class="sub">입체 모식도 · 궤도 경사 과장</span></div>
       <canvas id="cTop" aria-label="태양·지구·달의 공간 배치와 그림자"></canvas>
     </div>
     <div class="right-col">
@@ -197,11 +197,11 @@
   <div class="controls" id="controls">
     <div class="ctrl-grid">
       <div class="ctrl" id="c-beta">
-        <div class="row"><span class="name">달의 정렬 <span class="hint">궤도 경사에 따른 어긋남</span></span><span class="val" id="v-beta"></span></div>
+        <div class="row"><span class="name">궤도 경사 <span class="hint">공전 궤도면의 기울기 · 교점 어긋남</span></span><span class="val" id="v-beta"></span></div>
         <input type="range" id="r-beta" min="0" max="160" value="6" />
       </div>
       <div class="ctrl" id="c-travel">
-        <div class="row"><span class="name">식의 진행 <span class="hint">달의 공전 위치</span></span><span class="val" id="v-travel"></span></div>
+        <div class="row"><span class="name">공전 각도 <span class="hint">달이 궤도를 도는 위치</span></span><span class="val" id="v-travel"></span></div>
         <input type="range" id="r-travel" min="-100" max="100" value="0" />
       </div>
       <div class="ctrl" id="c-dist">
@@ -282,60 +282,112 @@
     ctx.fillStyle=color||PAL.text;ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(txt,x,y+1);ctx.textAlign="left";}
   function poly(ctx,pts){ctx.beginPath();ctx.moveTo(pts[0][0],pts[0][1]);for(let i=1;i<pts.length;i++)ctx.lineTo(pts[i][0],pts[i][1]);ctx.closePath();}
 
-  function drawSolarTop(){
-    const {w,h}=fit(cTop,xTop,Math.max(330,cTop.clientWidth*0.62));const ctx=xTop;spaceBg(ctx,w,h);
-    const midY=h*0.5,sunX=w*0.12,sunR=Math.min(50,h*0.15),earthX=w*0.84,earthR=Math.min(28,h*0.085),sunC=[sunX,midY];
-    const span=earthX-(sunX+sunR),rOrb=span*(0.30+0.30*S.dist);
-    const arc=(S.travel/2.5)*0.42,th=Math.PI-arc;
-    const moon=[earthX+rOrb*Math.cos(th),midY+rOrb*Math.sin(th)],RM=8+3*(1-S.dist);
-    ctx.strokeStyle="rgba(150,170,210,.25)";ctx.setLineDash([5,5]);ctx.lineWidth=1.2;ctx.beginPath();ctx.arc(earthX,midY,rOrb,0,7);ctx.stroke();ctx.setLineDash([]);
-    const d=Vnrm(Vsub(moon,sunC)),p=[-d[1],d[0]],L=Vlen(Vsub(moon,sunC));
-    const tipDist=RM*L/(sunR-RM),tip=Vadd(moon,Vmul(d,tipDist));
-    const mTop=Vadd(moon,Vmul(p,RM)),mBot=Vsub(moon,Vmul(p,RM)),sunTop=Vadd(sunC,Vmul(p,sunR)),sunBot=Vsub(sunC,Vmul(p,sunR));
-    const farLen=L*1.7;
-    const penTop=Vadd(mTop,Vmul(Vnrm(Vsub(mTop,sunBot)),farLen)),penBot=Vadd(mBot,Vmul(Vnrm(Vsub(mBot,sunTop)),farLen));
-    ctx.fillStyle=PAL.pen+".14)";poly(ctx,[mTop,penTop,penBot,mBot]);ctx.fill();
-    const ug=ctx.createLinearGradient(moon[0],moon[1],tip[0],tip[1]);ug.addColorStop(0,"rgba(3,5,10,.95)");ug.addColorStop(1,"rgba(3,5,10,0)");
-    ctx.fillStyle=ug;poly(ctx,[mTop,tip,mBot]);ctx.fill();
-    const reach=tip[0]>=earthX-earthR;
-    if(!reach){const beyond=Vadd(tip,Vmul(d,farLen*0.6)),bTop=Vadd(beyond,Vmul(p,RM*0.9)),bBot=Vsub(beyond,Vmul(p,RM*0.9));
-      ctx.strokeStyle="rgba(130,150,200,.5)";ctx.setLineDash([5,4]);ctx.lineWidth=1;
-      ctx.beginPath();ctx.moveTo(tip[0],tip[1]);ctx.lineTo(bTop[0],bTop[1]);ctx.stroke();
-      ctx.beginPath();ctx.moveTo(tip[0],tip[1]);ctx.lineTo(bBot[0],bBot[1]);ctx.stroke();ctx.setLineDash([]);}
-    ctx.strokeStyle="rgba(255,210,120,.16)";ctx.lineWidth=1;
-    for(let i=-2;i<=2;i++){ctx.beginPath();ctx.moveTo(sunX+sunR*.7,midY+i*sunR*.5);ctx.lineTo(moon[0],midY+i*sunR*.5);ctx.stroke();}
-    sunBody(ctx,sunX,midY,sunR);earthBody(ctx,earthX,midY,earthR);
-    const mg=ctx.createRadialGradient(moon[0]-RM*.3,moon[1]-RM*.3,1,moon[0],moon[1],RM);mg.addColorStop(0,"#3a3f4d");mg.addColorStop(1,"#15171f");
-    ctx.fillStyle=mg;ctx.beginPath();ctx.arc(moon[0],moon[1],RM,0,7);ctx.fill();ctx.strokeStyle="rgba(200,210,230,.4)";ctx.lineWidth=1;ctx.stroke();
-    tag(ctx,sunX,midY+sunR+16,"태양",PAL.warm);tag(ctx,earthX,midY+earthR+15,"지구",PAL.cy);tag(ctx,moon[0],moon[1]-RM-12,"달",PAL.text);
-    tag(ctx,earthX,midY-earthR-15,reach?"본그림자 닿음 → 개기":"본그림자 못 닿음 → 금환",reach?PAL.cy:PAL.warm);
+  /* ── 3D 투영 ── */
+  function project(P,cam){
+    const x=P[0],y=P[1],z=P[2],A=cam.A,e=cam.e;
+    const X=x*Math.cos(A)-y*Math.sin(A);
+    const Y=x*Math.sin(A)+y*Math.cos(A);
+    const up=z*Math.cos(e)-Y*Math.sin(e);
+    const depth=Y*Math.cos(e)+z*Math.sin(e);
+    return [cam.cx+X*cam.s, cam.cy-up*cam.s, depth];
   }
-  function drawLunarTop(){
-    const {w,h}=fit(cTop,xTop,Math.max(330,cTop.clientWidth*0.62));const ctx=xTop;spaceBg(ctx,w,h);
-    const midY=h*0.5,sunX=w*0.1,sunR=Math.min(48,h*0.14),earthX=w*0.4,earthR=Math.min(26,h*0.08),sunC=[sunX,midY],earthC=[earthX,midY];
-    const d=Vnrm(Vsub(earthC,sunC)),p=[-d[1],d[0]],L=Vlen(Vsub(earthC,sunC));
-    const tipDist=earthR*L/(sunR-earthR),tip=Vadd(earthC,Vmul(d,tipDist));
-    const eTop=Vadd(earthC,Vmul(p,earthR)),eBot=Vsub(earthC,Vmul(p,earthR)),sunTop=Vadd(sunC,Vmul(p,sunR)),sunBot=Vsub(sunC,Vmul(p,sunR));
-    const farLen=(w-earthX)*1.4;
-    const penTop=Vadd(eTop,Vmul(Vnrm(Vsub(eTop,sunBot)),farLen)),penBot=Vadd(eBot,Vmul(Vnrm(Vsub(eBot,sunTop)),farLen));
-    ctx.fillStyle=PAL.pen+".13)";poly(ctx,[eTop,penTop,penBot,eBot]);ctx.fill();
-    const ug=ctx.createLinearGradient(earthC[0],earthC[1],tip[0],tip[1]);ug.addColorStop(0,"rgba(3,5,10,.95)");ug.addColorStop(1,"rgba(3,5,10,0)");
-    ctx.fillStyle=ug;poly(ctx,[eTop,tip,eBot]);ctx.fill();
-    ctx.strokeStyle="rgba(255,210,120,.16)";ctx.lineWidth=1;
-    for(let i=-2;i<=2;i++){ctx.beginPath();ctx.moveTo(sunX+sunR*.7,midY+i*sunR*.5);ctx.lineTo(earthX,midY+i*sunR*.5);ctx.stroke();}
-    const rOrb=(w*0.86-earthX);ctx.strokeStyle="rgba(150,170,210,.25)";ctx.setLineDash([5,5]);ctx.lineWidth=1.2;
-    ctx.beginPath();ctx.ellipse(earthX,midY,rOrb,Math.min(rOrb,h*0.36),0,0,7);ctx.stroke();ctx.setLineDash([]);
-    const arc=(S.travel/2.5)*0.34,th=arc;
-    const moon=[earthX+rOrb*Math.cos(th),midY+Math.min(rOrb,h*0.36)*Math.sin(th)],moonScreenR=Math.max(8,earthR*0.9);
-    ctx.strokeStyle="rgba(120,220,235,.5)";ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(moon[0]-38,moon[1]+34);ctx.lineTo(moon[0]+40,moon[1]-30);ctx.stroke();
-    sunBody(ctx,sunX,midY,sunR);earthBody(ctx,earthX,midY,earthR);
-    const lt=lunarType();const mg=ctx.createRadialGradient(moon[0]-moonScreenR*.3,moon[1]-moonScreenR*.3,1,moon[0],moon[1],moonScreenR);
-    if(lt==="totalL"){mg.addColorStop(0,PAL.redLite);mg.addColorStop(1,"#6e1c12");}else{mg.addColorStop(0,PAL.moonHi);mg.addColorStop(1,PAL.moonShade);}
-    ctx.fillStyle=mg;ctx.beginPath();ctx.arc(moon[0],moon[1],moonScreenR,0,7);ctx.fill();ctx.strokeStyle="rgba(220,228,245,.4)";ctx.lineWidth=1;ctx.stroke();
-    tag(ctx,sunX,midY+sunR+16,"태양",PAL.warm);tag(ctx,earthX,midY+earthR+15,"지구",PAL.cy);tag(ctx,moon[0],moon[1]-moonScreenR-12,"달",PAL.text);
-    tag(ctx,(earthX+tip[0])/2,midY+earthR+15,"본그림자",PAL.mute);
+
+  /* ── 입체 공간 배치도 (황도면 + 기울어진 달 궤도) ── */
+  function drawTop3D(){
+    const {w,h}=fit(cTop,xTop,Math.max(360,cTop.clientWidth*0.66));
+    const ctx=xTop;spaceBg(ctx,w,h);
+    const mode=S.mode;
+    const cam={A:0.55,e:0.98,s:Math.min(w/7.6,h/3.4),cx:w*0.60,cy:h*0.54};
+    const SUNX=-2.7,SUN_WR=0.62,EAR_WR=0.34,ORB_R=1.5,MOON_WR=0.15;
+    const align=mode==="solar"?-1:1;
+    const phi=(S.travel/2.5)*0.55;            // 공전 각도(정렬점 기준)
+    const rho=(S.beta/1.6)*0.5;               // 궤도 경사(과장)
+    const flat=th=>[ORB_R*align*Math.cos(th), ORB_R*Math.sin(th), 0];
+    const tilt=P=>[P[0]*Math.cos(rho)+P[2]*Math.sin(rho), P[1], -P[0]*Math.sin(rho)+P[2]*Math.cos(rho)];
+    const earthDepth=project([0,0,0],cam)[2];
+    const moon3=tilt(flat(phi));
+
+    // 황도면 격자
+    ctx.strokeStyle="rgba(120,150,200,.10)";ctx.lineWidth=1;
+    for(let gx=-3;gx<=3;gx++){const a=project([gx,-2.2,0],cam),b=project([gx,2.2,0],cam);ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0],b[1]);ctx.stroke();}
+    for(let gy=-2;gy<=2;gy++){const a=project([-3,gy,0],cam),b=project([3,gy,0],cam);ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0],b[1]);ctx.stroke();}
+    {const lp=project([2.0,2.05,0],cam);tag(ctx,lp[0],lp[1],"황도면",PAL.mute);}
+
+    // 태양-지구 축(식 축)
+    {const a=project([SUNX,0,0],cam),b=project([3,0,0],cam);ctx.strokeStyle="rgba(255,210,120,.22)";ctx.setLineDash([6,5]);ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0],b[1]);ctx.stroke();ctx.setLineDash([]);}
+
+    // 평면 기준원(z=0, 점선) — 경사 비교용
+    ctx.strokeStyle="rgba(150,170,210,.18)";ctx.setLineDash([4,4]);ctx.lineWidth=1;ctx.beginPath();
+    for(let i=0;i<=64;i++){const p=project(flat(i/64*2*Math.PI),cam);i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]);}
+    ctx.stroke();ctx.setLineDash([]);
+
+    // 그림자 원뿔
+    function coneTo(apex,apexR,tip,dark){
+      const a=project(apex,cam),tp=project(tip,cam);
+      let dx=tp[0]-a[0],dy=tp[1]-a[1];const L=Math.hypot(dx,dy)||1,px=-dy/L,py=dx/L,r=apexR*cam.s;
+      const g=ctx.createLinearGradient(a[0],a[1],tp[0],tp[1]);
+      if(dark){g.addColorStop(0,"rgba(3,5,10,.9)");g.addColorStop(1,"rgba(3,5,10,0)");}
+      else{g.addColorStop(0,PAL.pen+".16)");g.addColorStop(1,PAL.pen+"0)");}
+      ctx.fillStyle=g;ctx.beginPath();ctx.moveTo(a[0]+px*r,a[1]+py*r);ctx.lineTo(tp[0],tp[1]);ctx.lineTo(a[0]-px*r,a[1]-py*r);ctx.closePath();ctx.fill();
+    }
+    let reach=true,uTipX=0;
+    sunBody3();
+    function sunBody3(){const c=project([SUNX,0,0],cam);sunBody(ctx,c[0],c[1],SUN_WR*cam.s);}
+    if(mode==="solar"){
+      const uLen=2.2-1.2*S.dist; uTipX=moon3[0]+uLen; reach=uTipX>=0;
+      coneTo(moon3,MOON_WR*2.4,[moon3[0]+2.4,moon3[1],moon3[2]],false); // 반그림자(근사)
+      coneTo(moon3,MOON_WR,[uTipX,moon3[1],moon3[2]],true);             // 본그림자
+    }else{
+      coneTo([0,0,0],EAR_WR*1.7,[3.1,0,0],false);
+      coneTo([0,0,0],EAR_WR,[2.9,0,0],true);
+    }
+
+    // 달 궤도(뒤쪽)
+    function ringPass(back){
+      ctx.lineWidth=back?1.3:2.1;ctx.strokeStyle=back?"rgba(150,170,210,.30)":"rgba(195,210,240,.9)";
+      ctx.beginPath();let started=false;
+      for(let i=0;i<=88;i++){const p=project(tilt(flat(i/88*2*Math.PI)),cam);
+        if((p[2]>earthDepth)===back){if(started)ctx.lineTo(p[0],p[1]);else{ctx.moveTo(p[0],p[1]);started=true;}}
+        else{if(started){ctx.stroke();ctx.beginPath();started=false;}}}
+      ctx.stroke();
+    }
+    ringPass(true);
+
+    // 지구
+    {const c=project([0,0,0],cam);earthBody(ctx,c[0],c[1],EAR_WR*cam.s);}
+
+    // 달 궤도(앞쪽)
+    ringPass(false);
+
+    // 달 높이 표시(경사 시각화): 달 → 황도면 투영 점선
+    {const a=project(moon3,cam),b=project([moon3[0],moon3[1],0],cam);
+     ctx.strokeStyle="rgba(255,255,255,.32)";ctx.setLineDash([3,3]);ctx.lineWidth=1;
+     ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0],b[1]);ctx.stroke();ctx.setLineDash([]);
+     ctx.fillStyle="rgba(150,170,210,.5)";ctx.beginPath();ctx.arc(b[0],b[1],2,0,7);ctx.fill();}
+
+    // 달
+    {const c=project(moon3,cam),r=Math.max(3,MOON_WR*cam.s);
+     const lt=mode==="solar"?solarType():lunarType();
+     const mg=ctx.createRadialGradient(c[0]-r*.3,c[1]-r*.3,1,c[0],c[1],r);
+     if(lt==="totalL"){mg.addColorStop(0,PAL.redLite);mg.addColorStop(1,"#6e1c12");}
+     else if(mode==="lunar"){mg.addColorStop(0,PAL.moonHi);mg.addColorStop(1,PAL.moonShade);}
+     else{mg.addColorStop(0,"#3a3f4d");mg.addColorStop(1,"#15171f");}
+     ctx.fillStyle=mg;ctx.beginPath();ctx.arc(c[0],c[1],r,0,7);ctx.fill();
+     ctx.strokeStyle="rgba(220,228,245,.45)";ctx.lineWidth=1;ctx.stroke();}
+
+    // 라벨
+    {const sp=project([SUNX,0,0],cam);tag(ctx,sp[0],sp[1]+SUN_WR*cam.s+14,"태양",PAL.warm);}
+    {const ep=project([0,0,0],cam);tag(ctx,ep[0],ep[1]+EAR_WR*cam.s+14,"지구",PAL.cy);}
+    {const mp=project(moon3,cam);tag(ctx,mp[0],mp[1]-MOON_WR*cam.s-13,"달",PAL.text);}
+    {const op=project(tilt(flat(align>0?Math.PI*0.5:Math.PI*0.5)),cam);tag(ctx,op[0],op[1],"달 공전 궤도",PAL.mute);}
+    if(mode==="solar"){const ep=project([0,0,0],cam);tag(ctx,ep[0],ep[1]-EAR_WR*cam.s-14,reach?"본그림자 닿음 → 개기":"본그림자 못 닿음 → 금환",reach?PAL.cy:PAL.warm);}
+
+    // 좌측 상단 판독값
+    ctx.font="600 11px Pretendard, sans-serif";ctx.fillStyle=PAL.mute;ctx.textAlign="left";ctx.textBaseline="top";
+    ctx.fillText("공전 각도 "+Math.round(phi*180/Math.PI)+"°  ·  궤도 경사 "+Math.round(rho*180/Math.PI)+"° (과장)",12,12);
   }
-  function mix(a,b,t){const pa=hx(a),pb=hx(b);return `rgb(${Math.round(pa[0]+(pb[0]-pa[0])*t)},${Math.round(pa[1]+(pb[1]-pa[1])*t)},${Math.round(pa[2]+(pb[2]-pa[2])*t)})`;}
+
+    function mix(a,b,t){const pa=hx(a),pb=hx(b);return `rgb(${Math.round(pa[0]+(pb[0]-pa[0])*t)},${Math.round(pa[1]+(pb[1]-pa[1])*t)},${Math.round(pa[2]+(pb[2]-pa[2])*t)})`;}
   function hx(c){return [parseInt(c.slice(1,3),16),parseInt(c.slice(3,5),16),parseInt(c.slice(5,7),16)];}
   function drawSolarSky(){
     const {w,h}=fit(cSky,xSky,260);const ctx=xSky;const t=solarType();
@@ -391,7 +443,7 @@
   function render(){
     el("controls").classList.toggle("lunar-mode",S.mode==="lunar");
     document.body.classList.toggle("lunar-mode",S.mode==="lunar");
-    if(S.mode==="solar"){drawSolarTop();drawSolarSky();}else{drawLunarTop();drawLunarSky();}
+    drawTop3D();if(S.mode==="solar"){drawSolarSky();}else{drawLunarSky();}
     drawXsec();
     const t=S.mode==="solar"?solarType():lunarType(),info=INFO[t],badge=el("badge");
     badge.className="badge "+(info.cls||"");el("badgeText").textContent=info.t;badge.querySelector("svg").innerHTML=iconFor(t);
@@ -425,7 +477,7 @@
     solar:[
       {controls:["travel"],preset:{beta:0,travel:0,dist:0.12},title:"일식은 언제 일어날까?",
         body:"태양·지구·달이 일직선이고 달이 태양과 지구 <b>사이(삭)</b>에 올 때 <b>일식</b>이 일어납니다.",
-        mission:"‘식의 진행’으로 달을 <b>공전</b>시켜 그림자가 지구를 지나가게 해보세요.",
+        mission:"‘공전 각도’으로 달을 <b>공전</b>시켜 그림자가 지구를 지나가게 해보세요.",
         key:"달이 공전하기에 그림자가 지구 표면을 휩쓸고 지나갑니다."},
       {controls:["dist","travel"],preset:{beta:0,travel:0,dist:0.10},title:"개기일식과 금환일식",
         body:"달이 가까우면 본그림자가 지구에 닿아 <b>개기일식</b>, 멀면 닿지 못해 고리만 남는 <b>금환일식</b>이 됩니다.",
@@ -434,12 +486,12 @@
         chips:[["개기일식",{beta:0,travel:0,dist:0.10}],["금환일식",{beta:0,travel:0,dist:0.92}],["혼성일식",{beta:0,travel:0,dist:0.50}]]},
       {controls:["beta","travel"],preset:{beta:0.20,travel:0,dist:0.3},title:"부분일식",
         body:"관측자가 달의 <b>반그림자</b>에 있으면 태양 일부만 가려지는 <b>부분일식</b>을 봅니다.",
-        mission:"‘달의 정렬’을 어긋나게 해 부분일식과 ‘식 없음’을 비교해 보세요.",
+        mission:"‘궤도 경사’을 어긋나게 해 부분일식과 ‘식 없음’을 비교해 보세요.",
         key:"정렬에 따라 개기 → 부분 → 식 없음으로 바뀝니다.",
         chips:[["개기일식",{beta:0,travel:0,dist:0.10}],["부분일식",{beta:0.20,travel:0,dist:0.3}],["식 없음",{beta:0.62,travel:0,dist:0.3}]]},
       {controls:["beta","travel"],preset:{beta:0.62,travel:0,dist:0.10},title:"왜 매달 일어나지 않을까?",
         body:"삭은 매달 오지만 달 궤도면이 약 <b>5° 기울어</b> 있어 대개 그림자가 지구를 비껴갑니다. 아래 ‘정렬 단면도’를 보세요.",
-        mission:"‘달의 정렬’을 키워 식이 사라지는 걸 확인하고, 0에 맞춰 다시 일식을 만들어 보세요.",
+        mission:"‘궤도 경사’을 키워 식이 사라지는 걸 확인하고, 0에 맞춰 다시 일식을 만들어 보세요.",
         key:"궤도 교점 근처에서 삭이 될 때만 일식이 일어납니다.",
         chips:[["정렬(개기)",{beta:0,travel:0,dist:0.10}],["어긋남(식 없음)",{beta:0.62,travel:0,dist:0.10}]]},
       {free:true,controls:["beta","travel","dist"],preset:{beta:0,travel:0,dist:0.12},title:"자유 탐구 (일식)",
@@ -451,16 +503,16 @@
     lunar:[
       {controls:["travel"],preset:{beta:0.1,travel:0},title:"월식은 언제 일어날까?",
         body:"달이 태양 <b>반대편(망)</b>에서 <b>지구의 그림자</b>로 들어가면 <b>월식</b>이 일어납니다. 보름달일 때만 가능해요.",
-        mission:"‘식의 진행’으로 달을 공전시켜 지구의 본그림자를 통과시켜 보세요.",
+        mission:"‘공전 각도’으로 달을 공전시켜 지구의 본그림자를 통과시켜 보세요.",
         key:"개기월식 때 달은 굴절된 붉은빛을 받아 붉게 보입니다."},
       {controls:["beta","travel"],preset:{beta:0.18,travel:0},title:"월식의 종류",
         body:"본그림자에 완전히 들면 <b>개기월식</b>, 일부만 들면 <b>부분월식</b>, 반그림자만 지나면 <b>반영식</b>입니다.",
-        mission:"‘달의 정렬’을 바꿔 세 종류의 차이를 관찰해 보세요.",
+        mission:"‘궤도 경사’을 바꿔 세 종류의 차이를 관찰해 보세요.",
         key:"달이 그림자의 어디를 지나는지가 종류를 정합니다.",
         chips:[["개기월식",{beta:0.18,travel:0}],["부분월식",{beta:0.62,travel:0}],["반영식",{beta:1.05,travel:0}]]},
       {controls:["beta","travel"],preset:{beta:1.6,travel:0},title:"왜 매달 일어나지 않을까?",
         body:"망은 매달 오지만 달 궤도면이 약 <b>5° 기울어</b> 있어 대개 달이 지구 그림자를 비껴갑니다.",
-        mission:"‘달의 정렬’을 키워 식이 사라지는 걸 확인하고, 줄여서 다시 월식을 만들어 보세요.",
+        mission:"‘궤도 경사’을 키워 식이 사라지는 걸 확인하고, 줄여서 다시 월식을 만들어 보세요.",
         key:"궤도 교점 근처에서 망이 될 때만 월식이 일어납니다.",
         chips:[["정렬(개기)",{beta:0.18,travel:0}],["어긋남(식 없음)",{beta:1.6,travel:0}]]},
       {free:true,controls:["beta","travel"],preset:{beta:0.18,travel:0},title:"자유 탐구 (월식)",
